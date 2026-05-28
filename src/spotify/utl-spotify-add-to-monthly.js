@@ -1,8 +1,7 @@
-const Spotify = importModule('spotify');
-const spotify = new Spotify();
-const alert = new Alert();
-
 (async () => {
+    const Spotify = importModule('spotify');
+    const spotify = new Spotify();
+    const alert = new Alert();
     const currentlyPlaying = await spotify.getCurrentlyPlaying();
     const trackUri = currentlyPlaying?.item?.uri;
 

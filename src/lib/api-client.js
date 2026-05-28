@@ -95,3 +95,5 @@ class ApiClient {
         : `${this.baseUrl}${endpoint}`;
     }
 }
+
+module.exports = ApiClient;

@@ -28,9 +28,6 @@ const { getOAuthConfig } = importModule('oauth-config');
  * @property {PlaylistTrackObject[]} items.items
  */
 
-
-
-
 class Spotify {
 
     constructor() {
@@ -39,6 +36,10 @@ class Spotify {
         this.api_client = new ApiClient({
             baseUrl: CONFIG.SPOTIFY.BASE_PATH,
         }, this.oauth);
+    }
+
+    async login() {
+        await this.oauth.authorize();
     }
 
     async getUserInfo() {
