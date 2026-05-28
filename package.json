@@ -1,0 +1,24 @@
+{
+  "name": "scriptable-ios-utils",
+  "version": "1.0.0",
+  "description": "A collection of Scriptable scripts I actually use on my iPhone for widgets, automations, and miscellaneous utilities built up over time. Nothing precious here; steal whatever's useful.",
+  "main": "index.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ddpacker/scriptable-ios-utils.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/ddpacker/scriptable-ios-utils/issues"
+  },
+  "homepage": "https://github.com/ddpacker/scriptable-ios-utils#readme",
+  "devDependencies": {
+    "@types/scriptable-ios": "^1.7.9"
+  }
+}
