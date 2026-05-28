@@ -1,5 +1,5 @@
 DIST_DIR = dist
-SRC_DIRS = lib notion obsidian spotify
+SRC_DIRS = src
 
 deploy:
 	rm -rf $(DIST_DIR)
