@@ -5,5 +5,5 @@ const { getOAuthConfig } = importModule('oauth-config');
     const params = args.queryParameters;
     const config = getOAuthConfig(params.service);
     const oauth = new OAuthClient(config);
-    await oauth.login(params);
+    await oauth.handleCallback(params);
 })();

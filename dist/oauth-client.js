@@ -56,43 +56,70 @@ class OAuthClient{
         }
 
         Keychain.set(this.config.accessTokenKey, data.access_token);
-        Keychain.set(this.config.expiresInKey, data.expires_in.toString());
+        Keychain.set(this.config.expiresInKey, (Date.now() + (data.expires_in * 1000)).toString());
         Keychain.set(this.config.refreshTokenKey, data.refresh_token);
     }
-    
-    /**
-     * @param {Object} params
-     * @param {string} params.code
-     * @param {string} params.state
-     * @param {string} params.error
-     */
-    async login(params) {
-        if (params.error) {
-            throw new Error(`Auth Error: ${params.error}`);
-        }
 
-        if (params.code && params.state) {
-            await this.handleCallback(params);
-        } else {
-            await this.authorize();
-        }
-    }
 
     async getToken() {
-        const token = Keychain.get(this.config.accessTokenKey);
-        return Keychain.get(this.config.accessTokenKey);
+        let accessToken, expiresIn, refreshToken;
+
+        try {
+            accessToken = Keychain.get(this.config.accessTokenKey);
+            expiresIn = parseInt(Keychain.get(this.config.expiresInKey), 10);
+            refreshToken = Keychain.get(this.config.refreshTokenKey);
+        }
+        catch {
+            this.clearTokens();
+            throw new Error("Access token invalid, please run utl-{service}-auth.js to authenticate and try again.")
+        }
+
+        if (Date.now() < expiresIn) {
+            return accessToken;
+        } else {
+            return await this.refreshAccessToken(refreshToken);
+        }
     }
 
-    async refreshToken() {
-        
+    /**
+     * 
+     * @param {string} refreshToken 
+     * @returns 
+     */
+    async refreshAccessToken(refreshToken) {
+        const req = new Request(this.config.tokenUrl);
+        req.method = 'POST';
+        req.headers = {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Authorization': `Basic ${btoa(`${this.config.clientId}:${this.config.clientSecret}`)}`,
+        };
+        req.body = `refresh_token=${encodeURIComponent(refreshToken)}&grant_type=refresh_token`;
+
+        const data = await req.loadJSON();
+
+        if (data.error) {
+            throw new Error(`Auth Error: ${data.message}`);
+        }
+
+        Keychain.set(this.config.accessTokenKey, data.access_token);
+        Keychain.set(this.config.expiresInKey, (Date.now() + (data.expires_in * 1000)).toString());
+
+        if (data.refresh_token) {
+            Keychain.set(this.config.refreshTokenKey, data.refresh_token);
+        }
+
+        return data.access_token;
     }
 
-    isTokenExpired() {
-
-    }
-
-    clearToken() {
-        
+    clearTokens() {
+        [this.config.accessTokenKey, this.config.expiresInKey, this.config.refreshTokenKey].forEach(key => {
+            try {
+                Keychain.remove(key);
+            }
+            catch {
+                // Ignore if key doesn't exist
+            }
+        });
     }
 
     getAuthorizationUrl() {
