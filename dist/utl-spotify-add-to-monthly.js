@@ -1,29 +1,43 @@
-(async () => {
-    const Spotify = importModule('spotify');
-    const spotify = new Spotify();
-    const alert = new Alert();
-    const currentlyPlaying = await spotify.getCurrentlyPlaying();
-    const trackUri = currentlyPlaying?.item?.uri;
+// Variables used by Scriptable.
+// These must be at the very top of the file. Do not edit.
+// icon-color: yellow; icon-glyph: magic;
+async function run() {
 
-    if (trackUri) {
-        const playlist = await spotify.getMonthlyPlaylist();
-        if (playlist) {
-            const isInPlaylist = await spotify.isSongInPlaylist(playlist, trackUri);
-            if (isInPlaylist) {
-                alert.title = "Already in Monthly Playlist";
-                alert.message = `${currentlyPlaying.item.name} is already in ${playlist.name}`;
-                alert.addAction("OK");
-                await alert.present();
-                return;
-            } else {
-                const result = await spotify.addToPlaylist(playlist.id, [trackUri]);
-                if (result) {
-                    alert.title = "Added to Monthly Playlist";
-                    alert.message = `Added ${currentlyPlaying.item.name} to ${playlist.name}`;
-                    alert.addAction("OK");
-                    await alert.present();
-                }
-            }
+    const Spotify = importModule('spotify');
+    const _spotify = new Spotify();
+    
+    try {
+        const track = (await _spotify.getCurrentlyPlaying())?.item;
+        
+        if (!track) throw new Error("There is no track currently playing");
+        
+        const playlist = (await _spotify.getMonthlyPlaylist());
+        
+        if (!playlist) throw new Error("Monthly playlist doesn't exist");
+        
+        const hasItem = (await _spotify.getPlaylistItems(playlist.id))
+            .items.some((t) => t.item?.uri === track.uri);
+        
+        if (hasItem) throw new Error(`${track.name} is already in your monthly playlist for ${playlist.name}`);
+        
+        const addedToMonthly = await _spotify.addToPlaylist(playlist.id, { uris: [track.uri] });
+        
+        if (!addedToMonthly) throw new Error(`Couldn't add ${track.name} to ${playlist.name}`);
+        
+        return `Successfully added ${track.name} to ${playlist.name}`
+        
+    } catch (e) {
+        if (e instanceof Error) {
+            return e.message;
         }
+        return "An unknown error occurred";
     }
+};
+
+await run().then((out) => {
+    console.log(out);
+    Script.setShortcutOutput(out);
+    Script.complete()
 });
+
+export {};

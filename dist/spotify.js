@@ -1,3 +1,6 @@
+// Variables used by Scriptable.
+// These must be at the very top of the file. Do not edit.
+// icon-color: gray; icon-glyph: cog;
 const CONFIG = importModule("config");
 
 const OAuthClient = importModule('oauth-client');
@@ -5,123 +8,91 @@ const ApiClient = importModule('api-client');
 
 const { getOAuthConfig } = importModule('oauth-config');
 
-/**
- * @typedef {Object} TrackObject
- * @property {Object} Album
- * @property {Object} Artists
- * @property {string} id
- * @property {string} name
- * @property {string} uri
- */
 
-/** 
- * @typedef {Object} PlaylistTrackObject
- * @property {TrackObject} item
-*/
-
-/**
- * @typedef {Object} PlaylistObject
- * @property {string} id
- * @property {string} name
- * @property {string} uri
- * @property {Object} items
- * @property {PlaylistTrackObject[]} items.items
- */
 
 class Spotify {
 
     constructor() {
-        this.oauth = new OAuthClient(getOAuthConfig("spotify"));
+        this._oauth = new OAuthClient(getOAuthConfig("spotify"));
 
-        this.api_client = new ApiClient({
+        this._apiClient = new ApiClient({
             baseUrl: CONFIG.SPOTIFY.BASE_PATH,
-        }, this.oauth);
+        }, this._oauth);
     }
+
+// --------------------
+// ------ PUBLIC ------
+// --------------------
+
 
     async login() {
-        await this.oauth.authorize();
+        await this._oauth.authorize();
     }
 
-    async getUserInfo() {
-        return this.api_client.get('/me');
-    }
 
     async getCurrentlyPlaying() {
-        return this.api_client.get('/me/player/currently-playing');
+        return this._apiClient.get('/me/player/currently-playing');
     }
 
-    /**
-     * 
-     * @param {PlaylistObject} playlist 
-     * @param {string} track_uri
-     * @return {Promise<boolean>}
-     */
-    async isSongInPlaylist(playlist, track_uri) {
-        const track = playlist.items.items.find((t) => t.item.uri === track_uri);
-        return !!track;
-    };
+
+    async getUserPlaylists(query = { offset: 0, limit: 50 }) {
+        const playlists = await this._apiClient.get('/me/playlists', query);
+    
+        if (!playlists) throw new Error("Couldn't fetch user's playlists");
+
+        return playlists;
+    }
+
 
     async getMonthlyPlaylist() {
-        const monthly_playlist_title = new Date().toLocaleDateString(
-            'en-US', { month: 'long', year: 'numeric' }
-        );
+        const monthlyPlaylistTitle = this._getMonthlyPlaylistTitle();
 
-        var monthly_playlist;
-        monthly_playlist = await this.searchForPlaylists(monthly_playlist_title);
+        let monthlyPlaylist = await this._searchForPlaylists(monthlyPlaylistTitle);
         
-        if (!monthly_playlist) {
-            monthly_playlist = await this.createPlaylist(monthly_playlist_title);
-        } 
+        if (monthlyPlaylist) return monthlyPlaylist;
 
-        return monthly_playlist;
+        return this.createPlaylist({
+            name: monthlyPlaylistTitle,
+            description: `A playlist for ${monthlyPlaylistTitle}`,
+        });
     }
 
-    /**
-     * 
-     * @param {string} playlist_id 
-     * @param {string} track_uris 
-     * @returns 
-     */
-    async addToPlaylist(playlist_id, track_uris) {
-        return this.api_client.post(`/playlists/${playlist_id}/items`, { uris: track_uris });
+
+    async getPlaylistItems(playlistId, query = {}) {
+        return this._apiClient.get(`/playlists/${playlistId}/items`, query);
     }
 
-    /**
-     * 
-     * @param {string} name 
-     * @returns
-     */
-    async createPlaylist(name) {
-        return this.api_client.post('/me/playlists', { name: name });
+
+    async addToPlaylist(playlistId, body) {
+        return this._apiClient.post(`/playlists/${playlistId}/items`, body);
     }
 
-    /**
-     * 
-     * @param {number} [offset=0] 
-     * @returns 
-     */
-    async getUserPlaylists(offset = 0) {
-        return this.api_client.get('/me/playlists', { offset: offset, limit: 50 });
+
+    async createPlaylist(body) {
+        return this._apiClient.post('/me/playlists', body);
     }
 
-    /**
-     * @param {string} name 
-     * @returns 
-     */
-    async searchForPlaylists(name) {
-        var offset = 0;
+
+// ---------------------
+// ------ PRIVATE ------
+// ---------------------
+
+    _getMonthlyPlaylistTitle() {
+        return new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    }
+
+
+    async _searchForPlaylists(name) {
+        let offset = 0;
+        let limit = 50;
         while (true) {
-            const res = await this.getUserPlaylists(offset);
-            if (res) {
-                const playlist = res.items.find((/** @type {{ name: string; }} */ p) => p.name === name);
-                if (playlist) return playlist;
-                if (res.next) { 
-                    offset += res.limit;
-                }
-            }
+            const res = await this.getUserPlaylists({ offset: offset, limit: limit });
+            const playlist = res.items.find((p) => p.name === name);
+            if (playlist) return playlist;
+            if (!res.next) return null;
+            offset += limit;
         }
     }
-
 }
 
 module.exports = Spotify;
