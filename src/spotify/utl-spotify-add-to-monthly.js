@@ -36,10 +36,9 @@ async function run() {
     }
 };
 
+//@ts-ignore
 await run().then((out) => {
     console.log(out);
     Script.setShortcutOutput(out);
     Script.complete()
 });
-
-export {};

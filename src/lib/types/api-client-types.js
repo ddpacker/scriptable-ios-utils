@@ -5,4 +5,4 @@
  *   @property {Record<string, string>} [headers] 
  */
 
-export {};
+module.exports = {};
