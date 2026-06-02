@@ -11,28 +11,28 @@ const ApiClient = importModule('api-client');
 const { getOAuthConfig } = importModule('oauth-config');
 
 /**
- * @typedef {import('./types/spotify.types').GetCurrentUserPlaylistsQuery}     GetCurrentUserPlaylistsQuery
- * @typedef {import('./types/spotify.types').GetCurrentUserPlaylistsResponse}  GetCurrentUserPlaylistsResponse
- * @typedef {import('./types/spotify.types').GetPlaylistItemsQuery}            GetPlaylistItemsQuery
- * @typedef {import('./types/spotify.types').GetPlaylistItemsResponse}         GetPlaylistItemsResponse
- * @typedef {import('./types/spotify.types').GetCurrentlyPlayingResponse}      GetCurrentlyPlayingResponse
- * @typedef {import('./types/spotify.types').AddToPlaylistBody}                AddToPlaylistBody
- * @typedef {import('./types/spotify.types').AddToPlaylistResponse}            AddToPlaylistResponse
- * @typedef {import('./types/spotify.types').CreatePlaylistBody}               CreatePlaylistBody
+ * @typedef {import('./types/spotify-types').GetCurrentUserPlaylistsQuery}     GetCurrentUserPlaylistsQuery
+ * @typedef {import('./types/spotify-types').GetCurrentUserPlaylistsResponse}  GetCurrentUserPlaylistsResponse
+ * @typedef {import('./types/spotify-types').GetPlaylistItemsQuery}            GetPlaylistItemsQuery
+ * @typedef {import('./types/spotify-types').GetPlaylistItemsResponse}         GetPlaylistItemsResponse
+ * @typedef {import('./types/spotify-types').GetCurrentlyPlayingResponse}      GetCurrentlyPlayingResponse
+ * @typedef {import('./types/spotify-types').AddToPlaylistBody}                AddToPlaylistBody
+ * @typedef {import('./types/spotify-types').AddToPlaylistResponse}            AddToPlaylistResponse
+ * @typedef {import('./types/spotify-types').CreatePlaylistBody}               CreatePlaylistBody
  */
 
 /**
- * @typedef {import('./types/spotify.types').Playlist}            Playlist
- * @typedef {import('./types/spotify.types').PlaylistTrackObject} PlaylistTrackObject
- * @typedef {import('./types/spotify.types').Track}               Track
- * @typedef {import('./types/spotify.types').Album}               Album
- * @typedef {import('./types/spotify.types').Artist}              Artist
- * @typedef {import('./types/spotify.types').Image}               Image
- * @typedef {import('./types/spotify.types').Owner}               Owner
- * @typedef {import('./types/spotify.types').Device}              Device
- * @typedef {import('./types/spotify.types').Context}             Context
- * @typedef {import('./types/spotify.types').Actions}             Actions
- * @typedef {import('./types/spotify.types').ExternalUrls}        ExternalUrls
+ * @typedef {import('./types/spotify-types').Playlist}            Playlist
+ * @typedef {import('./types/spotify-types').PlaylistTrackObject} PlaylistTrackObject
+ * @typedef {import('./types/spotify-types').Track}               Track
+ * @typedef {import('./types/spotify-types').Album}               Album
+ * @typedef {import('./types/spotify-types').Artist}              Artist
+ * @typedef {import('./types/spotify-types').Image}               Image
+ * @typedef {import('./types/spotify-types').Owner}               Owner
+ * @typedef {import('./types/spotify-types').Device}              Device
+ * @typedef {import('./types/spotify-types').Context}             Context
+ * @typedef {import('./types/spotify-types').Actions}             Actions
+ * @typedef {import('./types/spotify-types').ExternalUrls}        ExternalUrls
  */
 
 class Spotify {
