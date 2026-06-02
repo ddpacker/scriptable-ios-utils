@@ -1,3 +1,10 @@
+// Variables used by Scriptable.
+// These must be at the very top of the file. Do not edit.
+// icon-color: light-brown; icon-glyph: magic;
+// TODO: Update JSDocs
+// TODO: Move typedefs to a separate file
+// TODO: Update README.md
+
 const CONFIG = importModule("config");
 
 const OAuthClient = importModule('oauth-client');
@@ -35,6 +42,7 @@ class Spotify {
 
         this.api_client = new ApiClient({
             baseUrl: CONFIG.SPOTIFY.BASE_PATH,
+            
         }, this.oauth);
     }
 
@@ -47,9 +55,10 @@ class Spotify {
     }
 
     async getCurrentlyPlaying() {
-        return this.api_client.get('/me/player/currently-playing');
+        const res = await this.api_client.get('/me/player/currently-playing');
+        return res?.item ?? null;
     }
-
+    
     /**
      * 
      * @param {PlaylistObject} playlist 
@@ -60,6 +69,12 @@ class Spotify {
         const track = playlist.items.items.find((t) => t.item.uri === track_uri);
         return !!track;
     };
+    
+    async getPlaylistItems(playlist_id) {
+        const res = await this.api_client.get(`/playlists/${playlist_id}/items`);
+
+        return res?.items.map((pli) => pli.item.uri) ?? []
+    }
 
     async getMonthlyPlaylist() {
         const monthly_playlist_title = new Date().toLocaleDateString(
@@ -86,6 +101,10 @@ class Spotify {
         return this.api_client.post(`/playlists/${playlist_id}/items`, { uris: track_uris });
     }
 
+    async addToLibrary(track_uris) {
+        return this.api_client.put(`/me/library`, { uris: track_uris });
+    }
+    
     /**
      * 
      * @param {string} name 
@@ -101,7 +120,9 @@ class Spotify {
      * @returns 
      */
     async getUserPlaylists(offset = 0) {
-        return this.api_client.get('/me/playlists', { offset: offset, limit: 50 });
+        const playlists = await this.api_client.get('/me/playlists', { offset: offset, limit: 50 });
+    
+        return playlists;
     }
 
     /**
@@ -117,6 +138,8 @@ class Spotify {
                 if (playlist) return playlist;
                 if (res.next) { 
                     offset += res.limit;
+                } else {
+                    break;
                 }
             }
         }

@@ -1,29 +1,38 @@
-(async () => {
+// Variables used by Scriptable.
+// These must be at the very top of the file. Do not edit.
+// icon-color: yellow; icon-glyph: magic;
+async function run() {
     const Spotify = importModule('spotify');
     const spotify = new Spotify();
-    const alert = new Alert();
-    const currentlyPlaying = await spotify.getCurrentlyPlaying();
-    const trackUri = currentlyPlaying?.item?.uri;
-
-    if (trackUri) {
+    
+    try {
+        const track = await spotify.getCurrentlyPlaying();
+        
+        if (!track) throw new Error("There is no track currently playing");
+        
         const playlist = await spotify.getMonthlyPlaylist();
-        if (playlist) {
-            const isInPlaylist = await spotify.isSongInPlaylist(playlist, trackUri);
-            if (isInPlaylist) {
-                alert.title = "Already in Monthly Playlist";
-                alert.message = `${currentlyPlaying.item.name} is already in ${playlist.name}`;
-                alert.addAction("OK");
-                await alert.present();
-                return;
-            } else {
-                const result = await spotify.addToPlaylist(playlist.id, [trackUri]);
-                if (result) {
-                    alert.title = "Added to Monthly Playlist";
-                    alert.message = `Added ${currentlyPlaying.item.name} to ${playlist.name}`;
-                    alert.addAction("OK");
-                    await alert.present();
-                }
-            }
-        }
-    }
+        
+        if (!playlist) throw new Error("Monthly playlist doesn't exist");
+        
+        const playlistItems = await spotify.getPlaylistItems(playlist.id);
+        
+        const hasItem = playlistItems.includes(track.uri);
+        
+        if (hasItem) throw new Error(`${track.name} is already in your monthly playlist for ${playlist.name}`);
+        
+        const addedToMonthly = await spotify.addToPlaylist(playlist.id, [track.uri]);
+        
+        if (!addedToMonthly) throw new Error(`Couldn't add ${track.name} to ${playlist.name}`);
+        
+        return `Successfully added ${track.name} to ${playlist.name}`
+        
+    } catch (e) {
+        return e.message;
+    };
+};
+
+await run().then((out) => {
+    console.log(out);
+    Script.setShortcutOutput(out);
+    Script.complete()
 });
