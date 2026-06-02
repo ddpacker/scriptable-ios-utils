@@ -4,29 +4,28 @@
 class OAuthClient{
 
     /**
-     * @typedef {Object} OAuthConfig
-     * @property {string} clientId
-     * @property {string} clientSecret
-     * @property {string} authorizationUrl
-     * @property {string} tokenUrl
-     * @property {string} redirectUri
-     * @property {string[]} scopes
-     * @property {string} accessTokenKey
-     * @property {string} expiresInKey
-     * @property {string} refreshTokenKey 
+     * @typedef {import('../types/oauth-types').OAuthConfig} OAuthConfig
+     * @typedef {import('../types/oauth-types').OAuthTokenResponse} OAuthTokenResponse
+     * @typedef {import('../types/oauth-types').OAuthTokens} OAuthTokens
      */
     
     /**
      * @param {OAuthConfig} config
      */
     constructor(config) {
-        this.config = config;
+        this._config = config;
     }
 
+// --------------------
+// ------ PUBLIC ------
+// --------------------
+
+
     async authorize() {
-        const url = this.getAuthorizationUrl();
+        const url = this._getAuthorizationUrl();
         await Safari.open(url);
     }
+
 
     /**
      * @param {Object} args
@@ -39,13 +38,52 @@ class OAuthClient{
         const res = await this._handleResponse(req);
         this._storeTokens(res);
     }
-    
-    _storeTokens(res) {
-        Keychain.set(this.config.accessTokenKey, res.access_token);
-        Keychain.set(this.config.expiresInKey, (Date.now() + (res.expires_in * 1000)).toString());
-        Keychain.set(this.config.refreshTokenKey, res.refresh_token ?? "");
+
+
+    /**
+     * @return {Promise<string>} access token
+     */
+    async getToken() {
+        let { accessToken, expiresIn, refreshToken } = this._loadTokens();
+
+        if (Date.now() < expiresIn) return accessToken;
+        
+        if (!refreshToken) throw new Error("Token expired and no refresh token available, please re-authenticate.");
+        
+        return await this._refreshAccessToken(refreshToken);
     }
-    
+
+
+    clearTokens() {
+        [this._config.accessTokenKey, this._config.expiresInKey, this._config.refreshTokenKey].forEach(key => {
+            try {
+                Keychain.remove(key);
+            }
+            catch { /* no-op */ }
+        });
+    }
+
+
+// ---------------------
+// ------ PRIVATE ------
+// ---------------------
+
+
+    /**
+     * @param {OAuthTokenResponse} res 
+     */
+    _storeTokens(res) {
+        Keychain.set(this._config.accessTokenKey, res.access_token);
+        Keychain.set(this._config.expiresInKey, (Date.now() + (res.expires_in * 1000)).toString());
+        Keychain.set(this._config.refreshTokenKey, res.refresh_token ?? "");
+    }
+
+
+    /**
+     * 
+     * @param {Request} req 
+     * @returns {Promise<OAuthTokenResponse>}
+     */
     async _handleResponse(req) {
         const res = await req.loadJSON();
 
@@ -54,42 +92,47 @@ class OAuthClient{
         return res;
     }
 
+
+    /**
+     * @param {string} authCode 
+     * @returns {Request}
+     */
     _buildTokenRequest(authCode) {
-        const req = new Request(this.config.tokenUrl);
+        const req = new Request(this._config.tokenUrl);
 
         req.method = 'POST';
         req.headers = {
             'Content-Type': 'application/x-www-form-urlencoded',
-            'Authorization': `Basic ${btoa(`${this.config.clientId}:${this.config.clientSecret}`)}`,
+            'Authorization': `Basic ${btoa(`${this._config.clientId}:${this._config.clientSecret}`)}`,
         };
 
-        req.body = `code=${encodeURIComponent(authCode)}&redirect_uri=${encodeURIComponent(this.config.redirectUri)}&grant_type=authorization_code`;
+        req.body = `code=${encodeURIComponent(authCode)}&redirect_uri=${encodeURIComponent(this._config.redirectUri)}&grant_type=authorization_code`;
         
         return req;
     }
-    
+
+
+    /**
+     * @param {string} returnedState 
+     * @throws {Error} if state doesn't match stored value
+     */
     _validateState(returnedState) {
-        const storedState = Keychain.get(this.config.accessTokenKey + '-state');
+        const storedState = Keychain.get(this._config.accessTokenKey + '-state');
 
         if (storedState !== returnedState) throw new Error('Auth State Mismatch - Potential CSRF');
     }
 
-    async getToken() {
-        let { accessToken, expiresIn, refreshToken } = this._loadTokens();
 
-        if (Date.now() < expiresIn) return accessToken;
-        
-        if (!refreshToken) throw new Error("Token expired and no refresh token available, please re-authenticate.");
-        
-        return await this.refreshAccessToken(refreshToken);
-    }
-    
+    /**
+     * @returns {OAuthTokens}
+     * @throws {Error} if tokens are missing or invalid
+     */
     _loadTokens() {
         try {
             return {
-                accessToken: Keychain.get(this.config.accessTokenKey),
-            expiresIn: parseInt(Keychain.get(this.config.expiresInKey), 10),
-            refreshToken: Keychain.get(this.config.refreshTokenKey),
+                accessToken: Keychain.get(this._config.accessTokenKey),
+                expiresIn: parseInt(Keychain.get(this._config.expiresInKey), 10),
+                refreshToken: Keychain.get(this._config.refreshTokenKey),
             };
         } catch {
             this.clearTokens();
@@ -97,12 +140,13 @@ class OAuthClient{
         };
     }
 
+
     /**
-     * 
      * @param {string} refreshToken 
-     * @returns 
+     * @returns { Promise<string> }
+     * @throws {Error} if token refresh fails
      */
-    async refreshAccessToken(refreshToken) {
+    async _refreshAccessToken(refreshToken) {
         const req = this._buildRefreshRequest(refreshToken)
 
         const data = await req.loadJSON();
@@ -111,54 +155,56 @@ class OAuthClient{
             throw new Error(`Auth Error: ${data.message}`);
         }
 
-        Keychain.set(this.config.accessTokenKey, data.access_token);
-        Keychain.set(this.config.expiresInKey, (Date.now() + (data.expires_in * 1000)).toString());
+        Keychain.set(this._config.accessTokenKey, data.access_token);
+        Keychain.set(this._config.expiresInKey, (Date.now() + (data.expires_in * 1000)).toString());
 
         if (data.refresh_token) {
-            Keychain.set(this.config.refreshTokenKey, data.refresh_token);
+            Keychain.set(this._config.refreshTokenKey, data.refresh_token);
         }
 
         return data.access_token;
     }
-    
+
+
+    /**
+     * @param {string} refreshToken 
+     * @returns {Request}
+     */
     _buildRefreshRequest(refreshToken) {
-        const req = new Request(this.config.tokenUrl);
+        const req = new Request(this._config.tokenUrl);
         req.method = 'POST';
         req.headers = {
             'Content-Type': 'application/x-www-form-urlencoded',
-            'Authorization': `Basic ${btoa(`${this.config.clientId}:${this.config.clientSecret}`)}`,
+            'Authorization': `Basic ${btoa(`${this._config.clientId}:${this._config.clientSecret}`)}`,
         };
         req.body = `refresh_token=${encodeURIComponent(refreshToken)}&grant_type=refresh_token`;
         
         return req;
     }
 
-    clearTokens() {
-        [this.config.accessTokenKey, this.config.expiresInKey, this.config.refreshTokenKey].forEach(key => {
-            try {
-                Keychain.remove(key);
-            }
-            catch {
-                // Ignore if key doesn't exist
-            }
-        });
-    }
 
-    getAuthorizationUrl() {
-        const state = this.generateUUID();
-        Keychain.set(this.config.accessTokenKey + '-state', state);
+    /**
+     * @returns {string}
+     */
+    _getAuthorizationUrl() {
+        const state = this._generateUUID();
+        Keychain.set(this._config.accessTokenKey + '-state', state);
           const params = [
-            `client_id=${encodeURIComponent(this.config.clientId)}`,
+            `client_id=${encodeURIComponent(this._config.clientId)}`,
             `response_type=code`,
-            `redirect_uri=${encodeURIComponent(this.config.redirectUri)}`,
-            `scope=${encodeURIComponent(this.config.scopes.join(' '))}`,
+            `redirect_uri=${encodeURIComponent(this._config.redirectUri)}`,
+            `scope=${encodeURIComponent(this._config.scopes.join(' '))}`,
             `state=${encodeURIComponent(state)}`,
         ].join("&");
 
-        return `${this.config.authorizationUrl}?${params}`;
+        return `${this._config.authorizationUrl}?${params}`;
     }
 
-    generateUUID() {
+
+    /**
+     * @returns {string}
+     */
+    _generateUUID() {
         return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
             const r = Math.random() * 16 | 0;
             return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);

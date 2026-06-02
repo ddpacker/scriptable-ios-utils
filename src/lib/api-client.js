@@ -3,33 +3,26 @@
 // icon-color: orange; icon-glyph: magic;
 class ApiClient {
 
-    /**
-     * @typedef {Object} Oauth
-     *   @property {function(): Promise<string>} getToken
+    /** 
+     * @typedef {import('./oauth/oauth-client.js')} OAuth
+     * @typedef {import('./types/api-client-types.js').ApiClientConfig} ApiClientConfig
      */
 
     /**
-     * @typedef {Object} ApiClientConfig
-     *   @property {string} baseUrl
-     *   @property {number} [timeoutInterval]
-     *   @property {Record<string, string>} [headers] 
-     */
-
-    /**
-     * @param {ApiClientConfig} config
-     * @param {Oauth} oauth
+     * @param { ApiClientConfig } config
+     * @param { OAuth } oauth
      */
     constructor({ baseUrl, timeoutInterval = 30, headers = {}}, oauth) {
-        this.baseUrl = baseUrl;
-        this.timeoutInterval = timeoutInterval;
-        this.headers = headers;
-        this.oauth = oauth;
+        this._baseUrl = baseUrl;
+        this._timeoutInterval = timeoutInterval;
+        this._headers = headers;
+        this._oauth = oauth;
     };    
 
     /**
      * @param {string} endpoint 
      * @param {Object} [params] 
-     * @returns 
+     * @returns {Promise<JSON | null>}
      */
     async get(endpoint, params = {}) {
         const url = this._buildUrl(endpoint, params);
@@ -37,6 +30,11 @@ class ApiClient {
         return await this._handleResponse(req);
     }
     
+    /**
+     * @param {string} endpoint 
+     * @param {Object} [params] 
+     * @returns {Promise<JSON | null>}
+     */
     async put(endpoint, params = {}) {
         const url = this._buildUrl(endpoint, params);
         console.log(url)
@@ -48,7 +46,7 @@ class ApiClient {
      * @param {string} endpoint 
      * @param {Object} [body]
      * @param {Object} [params]
-     * @returns 
+     * @returns {Promise<JSON | null>}
      */
     async post(endpoint, body = {}, params = {}) {
         const url = this._buildUrl(endpoint, params);
@@ -60,21 +58,32 @@ class ApiClient {
         return await this._handleResponse(req);
     }
 
+    /**
+     * @param {string} url 
+     * @param {string} method 
+     * @returns {Promise<Request>}
+     */
     async _buildRequest(url, method) {
-        const token = await this.oauth.getToken();
+        const token = await this._oauth.getToken();
         const req = new Request(url);
         req.method = method;
         
         req.headers = { 
-            ...this.headers,
+            ...this._headers,
             "Authorization": `Bearer ${token}`,
         };
         
-        req.timeoutInterval = this.timeoutInterval;
+        req.timeoutInterval = this._timeoutInterval;
         
         return req;
     }
 
+    /**
+     * 
+     * @param {Request} req 
+     * @returns {Promise<JSON | null>}
+     * @throws {Error} if response status is >= 400
+     */
     async _handleResponse(req) {
         const res = await req.loadString();
         const status = req.response.statusCode;
@@ -84,7 +93,7 @@ class ApiClient {
         );
         
         if (status === 401) {
-            this.oauth.clearTokens();
+            this._oauth.clearTokens();
             throw new Error("Unauthorized — token may be expired");
         };
         if (status >= 400) throw new Error(`HTTP ${status}: ${JSON.stringify(res)}`);
@@ -97,12 +106,12 @@ class ApiClient {
     /**
      * @param {string} endpoint 
      * @param {Object} params 
-     * @returns 
+     * @returns {string}
      */
     _buildUrl(endpoint, params = {}) {
         const path = endpoint.startsWith("http")
             ? endpoint
-            : `${this.baseUrl}${endpoint}`;
+            : `${this._baseUrl}${endpoint}`;
         const queryString = Object.entries(params)
         .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
         .join("&");
