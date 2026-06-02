@@ -1,8 +1,6 @@
 // Variables used by Scriptable.
 // These must be at the very top of the file. Do not edit.
-// icon-color: light-brown; icon-glyph: magic;
-// TODO: Update README.md
-
+// icon-color: gray; icon-glyph: cog;
 const CONFIG = importModule("config");
 
 const OAuthClient = importModule('oauth-client');

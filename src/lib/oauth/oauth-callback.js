@@ -1,6 +1,6 @@
 // Variables used by Scriptable.
 // These must be at the very top of the file. Do not edit.
-// icon-color: deep-green; icon-glyph: magic;
+// icon-color: gray; icon-glyph: cog;
 const OAuthClient = importModule('oauth-client');
 const { getOAuthConfig } = importModule('oauth-config');
 
