@@ -1,3 +1,6 @@
+// Variables used by Scriptable.
+// These must be at the very top of the file. Do not edit.
+// icon-color: light-brown; icon-glyph: magic;
 class OAuthClient{
 
     /**
@@ -31,14 +34,27 @@ class OAuthClient{
      *  @param {string} args.state
      */
     async handleCallback(args) {
-        const state = Keychain.get(this.config.accessTokenKey + '-state');
+        this._validateState(args.state);
+        const req = this._buildTokenRequest(args.code);
+        const res = await this._handleResponse(req);
+        this._storeTokens(res);
+    }
+    
+    _storeTokens(res) {
+        Keychain.set(this.config.accessTokenKey, res.access_token);
+        Keychain.set(this.config.expiresInKey, (Date.now() + (res.expires_in * 1000)).toString());
+        Keychain.set(this.config.refreshTokenKey, res.refresh_token ?? "");
+    }
+    
+    async _handleResponse(req) {
+        const res = await req.loadJSON();
 
-        if (state !== args.state) { 
-            throw new Error('Auth State Mismatch - Potential');
-        }
+        if (res.error) throw new Error(`Auth Error: ${res.message}`);
+        
+        return res;
+    }
 
-        Keychain.remove(this.config.accessTokenKey + '-state');
-
+    _buildTokenRequest(authCode) {
         const req = new Request(this.config.tokenUrl);
 
         req.method = 'POST';
@@ -47,38 +63,38 @@ class OAuthClient{
             'Authorization': `Basic ${btoa(`${this.config.clientId}:${this.config.clientSecret}`)}`,
         };
 
-        req.body = `code=${encodeURIComponent(args.code)}&redirect_uri=${encodeURIComponent(this.config.redirectUri)}&grant_type=authorization_code`;
+        req.body = `code=${encodeURIComponent(authCode)}&redirect_uri=${encodeURIComponent(this.config.redirectUri)}&grant_type=authorization_code`;
+        
+        return req;
+    }
+    
+    _validateState(returnedState) {
+        const storedState = Keychain.get(this.config.accessTokenKey + '-state');
 
-        const data = await req.loadJSON();
-
-        if (data.error) {
-            throw new Error(`Auth Error: ${data.message}`);
-        }
-
-        Keychain.set(this.config.accessTokenKey, data.access_token);
-        Keychain.set(this.config.expiresInKey, (Date.now() + (data.expires_in * 1000)).toString());
-        Keychain.set(this.config.refreshTokenKey, data.refresh_token);
+        if (storedState !== returnedState) throw new Error('Auth State Mismatch - Potential CSRF');
     }
 
-
     async getToken() {
-        let accessToken, expiresIn, refreshToken;
+        let { accessToken, expiresIn, refreshToken } = this._loadTokens();
 
+        if (Date.now() < expiresIn) return accessToken;
+        
+        if (!refreshToken) throw new Error("Token expired and no refresh token available, please re-authenticate.");
+        
+        return await this.refreshAccessToken(refreshToken);
+    }
+    
+    _loadTokens() {
         try {
-            accessToken = Keychain.get(this.config.accessTokenKey);
-            expiresIn = parseInt(Keychain.get(this.config.expiresInKey), 10);
-            refreshToken = Keychain.get(this.config.refreshTokenKey);
-        }
-        catch {
+            return {
+                accessToken: Keychain.get(this.config.accessTokenKey),
+            expiresIn: parseInt(Keychain.get(this.config.expiresInKey), 10),
+            refreshToken: Keychain.get(this.config.refreshTokenKey),
+            };
+        } catch {
             this.clearTokens();
-            throw new Error("Access token invalid, please run utl-{service}-auth.js to authenticate and try again.")
-        }
-
-        if (Date.now() < expiresIn) {
-            return accessToken;
-        } else {
-            return await this.refreshAccessToken(refreshToken);
-        }
+            throw new Error("Access token invalid, please re-authenticate.");
+        };
     }
 
     /**
@@ -87,13 +103,7 @@ class OAuthClient{
      * @returns 
      */
     async refreshAccessToken(refreshToken) {
-        const req = new Request(this.config.tokenUrl);
-        req.method = 'POST';
-        req.headers = {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'Authorization': `Basic ${btoa(`${this.config.clientId}:${this.config.clientSecret}`)}`,
-        };
-        req.body = `refresh_token=${encodeURIComponent(refreshToken)}&grant_type=refresh_token`;
+        const req = this._buildRefreshRequest(refreshToken)
 
         const data = await req.loadJSON();
 
@@ -109,6 +119,18 @@ class OAuthClient{
         }
 
         return data.access_token;
+    }
+    
+    _buildRefreshRequest(refreshToken) {
+        const req = new Request(this.config.tokenUrl);
+        req.method = 'POST';
+        req.headers = {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Authorization': `Basic ${btoa(`${this.config.clientId}:${this.config.clientSecret}`)}`,
+        };
+        req.body = `refresh_token=${encodeURIComponent(refreshToken)}&grant_type=refresh_token`;
+        
+        return req;
     }
 
     clearTokens() {

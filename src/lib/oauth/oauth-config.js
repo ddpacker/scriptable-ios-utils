@@ -1,4 +1,8 @@
+// Variables used by Scriptable.
+// These must be at the very top of the file. Do not edit.
+// icon-color: deep-blue; icon-glyph: magic;
 const CONFIG = importModule("config");
+const KEYS = importModule("keys")
 
 /**
  * @param {string} service
@@ -18,9 +22,12 @@ function getOAuthConfig(service) {
     return {
         clientId: clientId,
         clientSecret: clientSecret,
-        authUrl: CONFIG[s].AUTH_URL,
+        accessTokenKey: KEYS[s].ACCESS_TOKEN,
+        refreshTokenKey: KEYS[s].REFRESH_TOKEN,
+        expiresInKey: KEYS[s].EXPIRES_IN,
         tokenUrl: CONFIG[s].TOKEN_URL,
         redirectUri: CONFIG[s].REDIRECT_URI,
+        authorizationUrl: CONFIG[s].AUTHORIZATION_URL,
         scopes: CONFIG[s].SCOPES,
     };
 }
