@@ -64,7 +64,14 @@ class Spotify {
 
 
     async addToPlaylist(playlistId, body) {
+        if (await this._isSongInPlaylist(playlistId, body.uris)) throw new Error(`That track is already in the playlist!`);
         return this._apiClient.post(`/playlists/${playlistId}/items`, body);
+    }
+
+    async saveToLibrary(query) {
+        if (await this._isItemInLibrary(query.uris)) return false;
+        await this._apiClient.put('/me/library', query);
+        return true;
     }
 
 
@@ -79,6 +86,24 @@ class Spotify {
 
     _getMonthlyPlaylistTitle() {
         return new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    }
+
+
+    async _isSongInPlaylist(playlistId, songUri) {
+        let offset = 0;
+        let limit = 50;
+        while (true) {
+            const res = await this.getPlaylistItems(playlistId, { offset: offset, limit: limit });
+            const song = res.items.find((p) => p.item?.uri === songUri);
+            if (song) return true;
+            if (!res.next) return false;
+            offset += limit;
+        }
+    }
+
+    async _isItemInLibrary(uri) {
+        const res = await this._apiClient.get('/me/library/contains', { uris: [uri] });
+        return res[0];
     }
 
 

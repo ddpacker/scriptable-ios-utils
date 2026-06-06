@@ -5,5 +5,10 @@ deploy:
 	rm -rf $(DIST_DIR)
 	mkdir -p $(DIST_DIR)
 	find $(SRC_DIRS) -name "*.js" ! -path "*/lib/types/*" | while read f; do \
-		sed '/^\s*\/\*/d; /^\s*\*/d' "$$f" > "$(DIST_DIR)/$$(basename $$f)"; \
+		sed \
+			-e '/^\s*\/\*/d' \
+			-e '/^\s*\*/d' \
+			-e '/\/\/ @ts-ignore/d' \
+			-e '/\/\/ @ts-expect-error/d' \
+			"$$f" > "$(DIST_DIR)/$$(basename $$f)"; \
 	done

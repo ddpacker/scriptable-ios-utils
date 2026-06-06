@@ -17,6 +17,9 @@ const { getOAuthConfig } = importModule('oauth-config');
  * @typedef {import('./types/spotify-types').AddToPlaylistBody}                AddToPlaylistBody
  * @typedef {import('./types/spotify-types').AddToPlaylistResponse}            AddToPlaylistResponse
  * @typedef {import('./types/spotify-types').CreatePlaylistBody}               CreatePlaylistBody
+ * @typedef {import('./types/spotify-types').CheckUsersSavedItemsQuery}        CheckUsersSavedItemsQuery
+ * @typedef {import('./types/spotify-types').CheckUsersSavedItemsResponse}     CheckUsersSavedItemsResponse
+ * @typedef {import('./types/spotify-types').SaveItemsToLibraryQuery}          SaveItemsToLibraryQuery
  */
 
 /**
@@ -105,10 +108,21 @@ class Spotify {
     /**
      * @param {string} playlistId
      * @param {AddToPlaylistBody} body
-     * @returns {Promise<AddToPlaylistResponse>}
+     * @returns {Promise<AddToPlaylistResponse | null>}
      */
     async addToPlaylist(playlistId, body) {
+        if (await this._isSongInPlaylist(playlistId, body.uris)) throw new Error(`That track is already in the playlist!`);
         return this._apiClient.post(`/playlists/${playlistId}/items`, body);
+    }
+
+    /**
+     * @param {SaveItemsToLibraryQuery} query
+     * @returns {Promise<boolean>}
+     */
+    async saveToLibrary(query) {
+        if (await this._isItemInLibrary(query.uris)) return false;
+        await this._apiClient.put('/me/library', query);
+        return true;
     }
 
 
@@ -130,6 +144,34 @@ class Spotify {
      */
     _getMonthlyPlaylistTitle() {
         return new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    }
+
+
+    /**
+     * @param {string} playlistId
+     * @param {string} songUri
+     * @returns {Promise<boolean>}
+     */
+    async _isSongInPlaylist(playlistId, songUri) {
+        let offset = 0;
+        let limit = 50;
+        while (true) {
+            const res = await this.getPlaylistItems(playlistId, { offset: offset, limit: limit });
+            const song = res.items.find((p) => p.item?.uri === songUri);
+            if (song) return true;
+            if (!res.next) return false;
+            offset += limit;
+        }
+    }
+
+    /**
+     * 
+     * @param {string} uri 
+     * @returns {Promise<boolean>}
+     */
+    async _isItemInLibrary(uri) {
+        const res = await this._apiClient.get('/me/library/contains', { uris: [uri] });
+        return res[0];
     }
 
 

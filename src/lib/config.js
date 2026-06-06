@@ -20,12 +20,12 @@ const Config = {
         TOKEN_URL: 'https://accounts.spotify.com/api/token',
         REDIRECT_URI: 'scriptable:///run/oauth-callback?service=spotify',
         SCOPES: [
-            'playlist-modify-public', 
-            'playlist-modify-private', 
-            'user-read-playback-state', 
-            'user-modify-playback-state',
+            'playlist-modify-public', 'playlist-modify-private', 
+            'user-read-playback-state', 'user-modify-playback-state',
             'playlist-read-private',
-            'user-read-recently-played'
+            'user-read-recently-played',
+            'user-library-read', 'user-library-modify',
+            'user-follow-read', 'user-follow-modify',
         ],
     },
 }

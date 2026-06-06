@@ -5,13 +5,13 @@
 
 /**
  * @typedef {Object} GetCurrentUserPlaylistsQuery
+ * @property {number} [offset=0]  // Index of the first playlist to return (max 100,000)
+ * @property {number} [limit=20]  // Max items to return (default 20, max 50)
  * 
  *    Endpoint: GET      /me/playlists
  *    Scopes:   playlist-read-private, playlist-read-collaborative
  *    @see https://developer.spotify.com/documentation/web-api/reference/get-a-list-of-current-users-playlists
- *
- * @property {number} [offset=0]  // Index of the first playlist to return (max 100,000)
- * @property {number} [limit=20]  // Max items to return (default 20, max 50)
+ * 
  */
     /**
      * @typedef {Object} GetCurrentUserPlaylistsResponse
@@ -27,16 +27,16 @@
 
 /**
  * @typedef {Object} GetPlaylistItemsQuery
- * 
- *    Endpoint: GET      /playlists/{playlist_id}/items
- *    Scopes:   playlist-read-private
- *    @see https://developer.spotify.com/documentation/web-api/reference/get-playlists-tracks
- * 
  * @property {string} [market]           // ISO 3166-1 alpha-2 country code for market filtering
  * @property {string} [fields]           // Comma-separated list of fields to return
  * @property {number} [limit=20]         // Max items to return (max 50)
  * @property {number} [offset=0]         // Index of the first item to return
  * @property {string} [additional_types] // Comma-separated item types beyond 'track' (e.g. 'episode')
+ * 
+ *    Endpoint: GET      /playlists/{playlist_id}/items
+ *    Scopes:   playlist-read-private
+ *    @see https://developer.spotify.com/documentation/web-api/reference/get-playlists-tracks
+ * 
  */
     /**
      * @typedef {Object} GetPlaylistItemsResponse
@@ -52,13 +52,13 @@
 
 /**
  * @typedef {Object} GetCurrentlyPlayingQuery
+ * @property {string} [market]           // ISO 3166-1 alpha-2 country code for market filtering
+ * @property {string} [additional_types] // Comma-separated item types beyond 'track' (e.g. 'episode')
  * 
  *    Endpoint: GET      /me/player/currently-playing
  *    Scopes:   user-read-currently-playing
  *    @see https://developer.spotify.com/documentation/web-api/reference/get-the-users-currently-playing-track
- *
- * @property {string} [market]           // ISO 3166-1 alpha-2 country code for market filtering
- * @property {string} [additional_types] // Comma-separated item types beyond 'track' (e.g. 'episode')
+ * 
  */
     /**
      * @typedef {Object} GetCurrentlyPlayingResponse
@@ -75,6 +75,36 @@
      */
 
 
+/**
+ * @typedef {Object} CheckUsersSavedItemsQuery
+ * @property {string} uris // Spotify URIs to check (max 40 per request)
+ * 
+ *    Endpoint: GET      /me/library/contains
+ *    Scopes:   user-library-read, user-follow-read, playlist-read-private
+ *    @see https://developer.spotify.com/documentation/web-api/reference/check-library-contains
+ * 
+ */
+    /**
+     * @typedef {boolean[]} CheckUsersSavedItemsResponse // Array of booleans indicating presence of each URI in the user's library
+     */
+
+
+// -----------------
+// ------ PUT ------
+// -----------------
+
+/**
+ * @typedef {Object} SaveItemsToLibraryQuery
+ * @property {string} uris // Spotify URIs to add (max 40 per request)
+ * @returns { Promise<boolean> } // Indicates success
+ * 
+ *    Endpoint: PUT      /me/library
+ *    Scopes:   user-library-modify, user-follow-modify, playlist-modify-public
+ *    @see https://developer.spotify.com/documentation/web-api/reference/save-library-items
+ * 
+ */
+
+
 // ------------------
 // ------ POST ------
 // ------------------
@@ -82,13 +112,11 @@
 
 /**
  * @typedef {Object} AddToPlaylistBody
+ * @property {string} uris       // Spotify URIs to add (max 100 per request)
  * 
  *    Endpoint: POST     /playlists/{playlist_id}/items
  *    Scopes:   playlist-modify-public, playlist-modify-private
  *    @see https://developer.spotify.com/documentation/web-api/reference/add-tracks-to-playlist
- *
- * @property {string[]} uris       // Spotify URIs to add (max 100 per request)
- * @property {number}   [position] // Zero-based index for insertion point; appends to end if omitted
  */
     /**
      * @typedef {Object} AddToPlaylistResponse
@@ -98,15 +126,15 @@
 
 /**
  * @typedef {Object} CreatePlaylistBody
- * 
- *    Endpoint: POST     /me/playlists
- *    Scopes:   playlist-modify-public, playlist-modify-private
- *    @see https://developer.spotify.com/documentation/web-api/reference/create-playlist
- *
  * @property {string}  name                  // Name for the new playlist
  * @property {boolean} [public=true]         // Whether the playlist is visible on the user's profile
  * @property {boolean} [collaborative=false] // Whether others can modify the playlist; requires public=false
  * @property {string}  [description]         // Playlist description shown in Spotify clients
+ * 
+ *    Endpoint: POST     /me/playlists
+ *    Scopes:   playlist-modify-public, playlist-modify-private
+ *    @see https://developer.spotify.com/documentation/web-api/reference/create-playlist
+ * 
  */
 
 

@@ -8,23 +8,18 @@ async function run() {
     
     try {
         const track = (await _spotify.getCurrentlyPlaying())?.item;
-        
         if (!track) throw new Error("There is no track currently playing");
         
         const playlist = (await _spotify.getMonthlyPlaylist());
-        
         if (!playlist) throw new Error("Monthly playlist doesn't exist");
         
-        const hasItem = (await _spotify.getPlaylistItems(playlist.id))
-            .items.some((t) => t.item?.uri === track.uri);
-        
-        if (hasItem) throw new Error(`${track.name} is already in your monthly playlist for ${playlist.name}`);
-        
-        const addedToMonthly = await _spotify.addToPlaylist(playlist.id, { uris: [track.uri] });
-        
+        const addedToMonthly = await _spotify.addToPlaylist(playlist.id, { uris: track.uri });
         if (!addedToMonthly) throw new Error(`Couldn't add ${track.name} to ${playlist.name}`);
+
+        const addedToLibrary = await _spotify.saveToLibrary({ uris: track.uri });
+            
+        return `Successfully added ${track.name} to ${playlist.name} ${addedToLibrary ? 'and your library!' : 'but it was already in your library!'}`;
         
-        return `Successfully added ${track.name} to ${playlist.name}`
         
     } catch (e) {
         if (e instanceof Error) {
@@ -37,7 +32,4 @@ async function run() {
 await run().then((out) => {
     console.log(out);
     Script.setShortcutOutput(out);
-    Script.complete()
 });
-
-export {};
