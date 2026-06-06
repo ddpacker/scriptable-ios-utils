@@ -112,7 +112,7 @@
 
 /**
  * @typedef {Object} AddToPlaylistBody
- * @property {string} uris       // Spotify URIs to add (max 100 per request)
+ * @property {string[]} uris       // Spotify URIs to add (max 100 per request)
  * 
  *    Endpoint: POST     /playlists/{playlist_id}/items
  *    Scopes:   playlist-modify-public, playlist-modify-private

@@ -1,6 +1,8 @@
 // Variables used by Scriptable.
 // These must be at the very top of the file. Do not edit.
 // icon-color: yellow; icon-glyph: magic;
+import { DuplicateError } from '../lib/errors.js';
+
 async function run() {
 
     const Spotify = importModule('spotify');
@@ -13,14 +15,21 @@ async function run() {
         const playlist = (await _spotify.getMonthlyPlaylist());
         if (!playlist) throw new Error("Monthly playlist doesn't exist");
         
-        const addedToMonthly = await _spotify.addToPlaylist(playlist.id, { uris: track.uri });
-        if (!addedToMonthly) throw new Error(`Couldn't add ${track.name} to ${playlist.name}`);
+        const [playlistError, libraryError] = await Promise.all([
+            _spotify.addToPlaylist(playlist, track).then(() => null).catch(e => e),
+            _spotify.saveToLibrary(track).then(() => null).catch(e => e),
+        ])
 
-        const addedToLibrary = await _spotify.saveToLibrary({ uris: track.uri });
-            
-        return `Successfully added ${track.name} to ${playlist.name} ${addedToLibrary ? 'and your library!' : 'but it was already in your library!'}`;
-        
-        
+        const playlistDuplicate = playlistError instanceof DuplicateError;
+        const libraryDuplicate = libraryError instanceof DuplicateError;
+                
+        if (playlistDuplicate && libraryDuplicate) throw new DuplicateError(`${track.name} already added to ${playlist.name} and your library!`);
+        if (playlistError && libraryError) throw new Error(`Failed to save to ${playlist.name} and your library!`)
+        if (playlistError && libraryDuplicate) throw new Error (`${track.name} is already in your library, but couldn't be added to ${playlist.name}`);
+        if (libraryError && playlistDuplicate) throw new Error (`${track.name} is already in ${playlist.name}, but couldn't be added to your library`);
+        if (libraryError) return `Successfully added ${track.name} to ${playlist.name}!`
+        if (playlistError) return `Successfully added ${track.name} to your library!`
+        return `Successfully added ${track.name} to ${playlist.name} and your library!`
     } catch (e) {
         if (e instanceof Error) {
             return e.message;

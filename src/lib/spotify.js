@@ -5,6 +5,8 @@ const CONFIG = importModule("config");
 
 const OAuthClient = importModule('oauth-client');
 const ApiClient = importModule('api-client');
+const { DuplicateError } = importModule('errors');
+
 
 const { getOAuthConfig } = importModule('oauth-config');
 
@@ -105,24 +107,36 @@ class Spotify {
     }
 
 
+
     /**
-     * @param {string} playlistId
-     * @param {AddToPlaylistBody} body
-     * @returns {Promise<AddToPlaylistResponse | null>}
+     * @param { Playlist } playlist
+     * @param { Track } track
+     * @returns { Promise<void> }
      */
-    async addToPlaylist(playlistId, body) {
-        if (await this._isSongInPlaylist(playlistId, body.uris)) throw new Error(`That track is already in the playlist!`);
-        return this._apiClient.post(`/playlists/${playlistId}/items`, body);
+    async addToPlaylist(playlist, track) {
+        if (await this._isSongInPlaylist(playlist.id, track.uri)) {
+            throw new DuplicateError(`${track.name} is already in ${playlist.name}!`)
+        }
+
+        /** @type { AddToPlaylistBody } */
+        const body = { uris: [track.uri] };
+
+        await this._apiClient.post(`/playlists/${playlist.id}/items`, body);
     }
 
     /**
-     * @param {SaveItemsToLibraryQuery} query
-     * @returns {Promise<boolean>}
+     * @param {Album | Track} item
+     * @returns {Promise<void>}
      */
-    async saveToLibrary(query) {
-        if (await this._isItemInLibrary(query.uris)) return false;
+    async saveToLibrary(item) {
+        if (await this._isItemInLibrary(item.uri)) {
+            throw new DuplicateError(`${item.name} is already in your library!`)
+        }
+
+        /** @type { SaveItemsToLibraryQuery } */
+        const query = { uris: item.uri };
+
         await this._apiClient.put('/me/library', query);
-        return true;
     }
 
 
