@@ -1,7 +1,7 @@
 // Variables used by Scriptable.
 // These must be at the very top of the file. Do not edit.
 // icon-color: yellow; icon-glyph: magic;
-import { DuplicateError } from '../lib/errors.js';
+const { DuplicateError } = importModule('errors');
 
 async function run() {
 
@@ -31,10 +31,7 @@ async function run() {
         if (playlistError) return `Successfully added ${track.name} to your library!`
         return `Successfully added ${track.name} to ${playlist.name} and your library!`
     } catch (e) {
-        if (e instanceof Error) {
-            return e.message;
-        }
-        return "An unknown error occurred";
+        return e.message;
     }
 };
 
