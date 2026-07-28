@@ -4,6 +4,7 @@
 const CONFIG = importModule("config");
 
 const OAuthClient = importModule('oauth-client');
+const OAuthAuthProvider = importModule('oauth-auth-provider');
 const ApiClient = importModule('api-client');
 const { DuplicateError } = importModule('errors');
 
@@ -45,7 +46,7 @@ class Spotify {
 
         this._apiClient = new ApiClient({
             baseUrl: CONFIG.SPOTIFY.BASE_PATH,
-        }, this._oauth);
+        }, new OAuthAuthProvider(this._oauth));
     }
 
 // --------------------

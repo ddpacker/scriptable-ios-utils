@@ -4,19 +4,19 @@
 class ApiClient {
 
     /** 
-     * @typedef {import('./oauth/oauth-client.js')} OAuth
+     * @typedef {import('./types/auth-types').AuthProvider} AuthProvider
      * @typedef {import('./types/api-client-types.js').ApiClientConfig} ApiClientConfig
      */
 
     /**
      * @param { ApiClientConfig } config
-     * @param { OAuth } oauth
+     * @param { AuthProvider } auth
      */
-    constructor({ baseUrl, timeoutInterval = 30, headers = {}}, oauth) {
+    constructor({ baseUrl, timeoutInterval = 30, headers = {}}, auth) {
         this._baseUrl = baseUrl;
         this._timeoutInterval = timeoutInterval;
         this._headers = headers;
-        this._oauth = oauth;
+        this._auth = auth;
     };    
 
     /**
@@ -64,13 +64,13 @@ class ApiClient {
      * @returns {Promise<Request>}
      */
     async _buildRequest(url, method) {
-        const token = await this._oauth.getToken();
+        const authHeaders = await this._auth.getHeaders();
         const req = new Request(url);
         req.method = method;
         
         req.headers = { 
             ...this._headers,
-            "Authorization": `Bearer ${token}`,
+            ...authHeaders,
         };
         
         req.timeoutInterval = this._timeoutInterval;
@@ -93,7 +93,9 @@ class ApiClient {
         );
         
         if (status === 401) {
-            this._oauth.clearTokens();
+            if (typeof this._auth.onUnauthorized === "function") {
+                this._auth.onUnauthorized();
+            }
             throw new Error("Unauthorized — token may be expired");
         };
         if (status >= 400) throw new Error(`HTTP ${status}: ${JSON.stringify(res)}`);
